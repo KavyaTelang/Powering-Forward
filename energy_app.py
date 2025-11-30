@@ -3,6 +3,7 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
+import os
 
 # Set page configuration
 st.set_page_config(
@@ -19,45 +20,61 @@ st.markdown("""
         font-weight: bold;
         color: #1f77b4;
     }
-    .metric-card {
-        background-color: #f0f2f6;
-        padding: 20px;
-        border-radius: 10px;
-        box-shadow: 2px 2px 5px rgba(0,0,0,0.1);
-    }
     </style>
     """, unsafe_allow_html=True)
 
 # Title and Header
 st.markdown('<p class="main-header">⚡ Powering Forward</p>', unsafe_allow_html=True)
 st.markdown("### A Vector Analysis of U.S. Energy Growth")
-st.markdown("**Data Source:** U.S. Energy Information Administration (EIA) | **Period:** 2014-2024")
-st.markdown("---")
 
-# Load or create data
+# LOAD DATA - REAL CSV ONLY
 @st.cache_data
 def load_data():
-    """Load the energy dataset"""
-    data = {
-        'Year': [2014, 2015, 2016, 2017, 2018, 2019, 2020, 2021, 2022, 2023, 2024],
-        'Solar_TWh': [18.3, 26.5, 36.8, 52.9, 66.6, 71.3, 90.9, 115.6, 145.8, 163.6, 188.5],
-        'Wind_TWh': [181.8, 190.7, 226.5, 254.3, 275.8, 303.4, 338.0, 379.5, 434.8, 425.2, 447.6]
-    }
-    df = pd.DataFrame(data)
+    """Load ONLY from CSV - no sample data fallback"""
+    csv_path = 'data/eia_renewable_data.csv'
+    
+    # Check if file exists
+    if not os.path.exists(csv_path):
+        st.error(f"❌ CSV file not found at: {csv_path}")
+        st.error("Please run the data processing script first!")
+        st.stop()
+    
+    # Read CSV
+    df = pd.read_csv(csv_path)
+    
+    # Validate data
+    required_cols = ['Year', 'Solar_TWh', 'Wind_TWh']
+    missing_cols = [col for col in required_cols if col not in df.columns]
+    if missing_cols:
+        st.error(f"❌ Missing required columns: {missing_cols}")
+        st.stop()
+    
+    # Calculate additional columns
     df['Total_Renewable'] = df['Solar_TWh'] + df['Wind_TWh']
     df['Solar_YoY_Growth'] = df['Solar_TWh'].pct_change() * 100
     df['Wind_YoY_Growth'] = df['Wind_TWh'].pct_change() * 100
+    
     return df
 
+# Load the data
+df = load_data()
+
+# Show data info in sidebar
+st.sidebar.success(f"✅ Real Kaggle EIA Data Loaded")
+st.sidebar.metric("Total Years", len(df))
+st.sidebar.metric("Date Range", f"{df['Year'].min()} - {df['Year'].max()}")
+st.sidebar.metric("First Solar Value", f"{df['Solar_TWh'].iloc[0]:.1f} TWh")
+
+# Update the header with actual date range
+st.markdown(f"**Data Source:** U.S. Energy Information Administration (EIA) via Kaggle | **Period:** {df['Year'].min()}-{df['Year'].max()}")
+st.markdown("---")
+
+# Calculate CAGR
 def calculate_cagr(start_value, end_value, num_years):
     """Calculate Compound Annual Growth Rate"""
     cagr = (end_value / start_value) ** (1 / num_years) - 1
     return cagr * 100
 
-# Load data
-df = load_data()
-
-# Calculate CAGR
 solar_start = df['Solar_TWh'].iloc[0]
 solar_end = df['Solar_TWh'].iloc[-1]
 wind_start = df['Wind_TWh'].iloc[0]
@@ -72,7 +89,7 @@ col1, col2, col3 = st.columns(3)
 
 with col1:
     st.metric(
-        label="☀️ Solar CAGR (10-Year)",
+        label=f"☀️ Solar CAGR ({num_years}-Year)",
         value=f"{solar_cagr:.2f}%",
         delta=f"{solar_end - solar_start:.1f} TWh growth"
     )
@@ -80,7 +97,7 @@ with col1:
 
 with col2:
     st.metric(
-        label="💨 Wind CAGR (10-Year)",
+        label=f"💨 Wind CAGR ({num_years}-Year)",
         value=f"{wind_cagr:.2f}%",
         delta=f"{wind_end - wind_start:.1f} TWh growth"
     )
@@ -106,7 +123,7 @@ tab1, tab2, tab3, tab4 = st.tabs([
 
 # Tab 1: Generation Overview
 with tab1:
-    st.subheader("Renewable Energy Generation Trends (2014-2024)")
+    st.subheader(f"Renewable Energy Generation Trends ({df['Year'].min()}-{df['Year'].max()})")
     
     # Set style
     sns.set_style("whitegrid")
@@ -124,7 +141,8 @@ with tab1:
     # Styling
     ax.set_xlabel('Year', fontsize=14, fontweight='bold')
     ax.set_ylabel('Energy Generation (TWh)', fontsize=14, fontweight='bold')
-    ax.set_title('U.S. Renewable Energy Generation', fontsize=16, fontweight='bold', pad=20)
+    ax.set_title('U.S. Renewable Energy Generation (Real Kaggle EIA Data)', 
+                 fontsize=16, fontweight='bold', pad=20)
     ax.legend(fontsize=12, loc='upper left')
     ax.grid(True, alpha=0.3)
     ax.set_xticks(df['Year'])
@@ -140,7 +158,7 @@ with tab1:
     plt.tight_layout()
     st.pyplot(fig)
     
-    st.info("**Key Insight:** Solar generation shows exponential growth, increasing over 10x from 2014 to 2024, while wind energy more than doubled in the same period.")
+    st.info(f"**What I Found:** Solar generation grew from {solar_start:.1f} TWh to {solar_end:.1f} TWh (a {((solar_end/solar_start - 1)*100):.0f}% increase), while wind grew from {wind_start:.1f} TWh to {wind_end:.1f} TWh ({((wind_end/wind_start - 1)*100):.0f}% increase). The difference in growth trajectories is striking.")
 
 # Tab 2: CAGR Analysis
 with tab2:
@@ -160,7 +178,7 @@ with tab2:
                 va='center', fontsize=14, fontweight='bold')
     
     ax.set_xlabel('Compound Annual Growth Rate (%)', fontsize=13, fontweight='bold')
-    ax.set_title('CAGR Comparison: Solar vs Wind (2014-2024)', 
+    ax.set_title(f'CAGR Comparison: Solar vs Wind ({df["Year"].min()}-{df["Year"].max()})', 
                  fontsize=16, fontweight='bold', pad=20)
     ax.set_xlim(0, max(values) * 1.2)
     ax.grid(True, alpha=0.3, axis='x')
@@ -171,14 +189,14 @@ with tab2:
     col1, col2 = st.columns(2)
     
     with col1:
-        st.markdown("#### ☀️ Solar Analysis")
+        st.markdown("#### ☀️ Solar Growth")
         st.write(f"**CAGR: {solar_cagr:.2f}%**")
-        st.write("Reflects rapid technological advancement, cost reductions (80%+ since 2010), and policy incentives driving adoption.")
+        st.write("Solar is growing fast because the technology keeps getting cheaper. What used to be expensive is now cost-competitive with traditional energy sources, which is driving rapid adoption.")
     
     with col2:
-        st.markdown("#### 💨 Wind Analysis")
+        st.markdown("#### 💨 Wind Growth")
         st.write(f"**CAGR: {wind_cagr:.2f}%**")
-        st.write("Shows steady growth from a larger base, with mature technology and geographic constraints moderating expansion rate.")
+        st.write("Wind has been around longer and is more established. The growth rate is lower because we're adding to an already large base - but it's still growing steadily.")
 
 # Tab 3: YoY Trends
 with tab3:
@@ -209,12 +227,14 @@ with tab3:
     st.pyplot(fig)
     
     with st.expander("📊 Methodology & Data Processing"):
-        st.markdown("""
-        - **Data Source:** EIA Form EIA-923 monthly generation reports
-        - **Processing:** Pandas time-series aggregation with datetime indexing
-        - **Cleaning:** Handled missing values, removed anomalies using IQR method
+        st.markdown(f"""
+        - **Data Source:** Kaggle dataset of U.S. EIA renewable energy generation
+        - **Processing:** Filtered for "Total Electric Power Industry" to avoid double-counting
+        - **Aggregation:** Summed monthly state-level data to annual national totals
+        - **Unit Conversion:** Converted from Megawatt-hours (MWh) to Terawatt-hours (TWh)
         - **CAGR Formula:** (End Value / Start Value)^(1 / Years) - 1
-        - **Visualization:** Matplotlib/Seaborn with custom styling
+        - **Time Period:** {df['Year'].min()} to {df['Year'].max()} ({num_years} years)
+        - **Tools:** Python, Pandas, NumPy, Matplotlib, Seaborn, Streamlit
         """)
 
 # Tab 4: Data Table
@@ -236,8 +256,8 @@ with tab4:
     
     summary_data = {
         'Metric': [
-            'Starting Value (2014)',
-            'Ending Value (2024)',
+            f'Starting Value ({df["Year"].min()})',
+            f'Ending Value ({df["Year"].max()})',
             'Total Growth',
             'CAGR',
             'Average Annual Increase',
@@ -266,66 +286,45 @@ with tab4:
 
 # Footer Section
 st.markdown("---")
-st.subheader("🔑 Key Findings & Impact")
+st.subheader("🔑 My Takeaways")
 
 col1, col2, col3 = st.columns(3)
 
 with col1:
-    st.markdown("#### ☀️ Solar Dominance")
-    st.write(f"Solar CAGR exceeds wind by **{(solar_cagr - wind_cagr):.1f}** percentage points, driven by plummeting installation costs and residential adoption.")
+    st.markdown("#### ☀️ Solar Is Accelerating")
+    st.write(f"Solar's **{solar_cagr:.1f}%** growth rate far exceeds wind's **{wind_cagr:.1f}%**. This makes sense given how much solar panel costs have dropped - they're now cheaper than ever for both utilities and homeowners.")
 
 with col2:
-    st.markdown("#### 💨 Wind Stability")
-    st.write("Wind maintains steady double-digit growth from mature installed base, with offshore potential representing next frontier.")
+    st.markdown("#### 💨 Wind Is Steady")
+    st.write(f"Wind grew **{((wind_end - wind_start) / wind_start * 100):.0f}%** over this period, but from a much larger base. It's a more mature technology, so the explosive growth phase has passed.")
 
 with col3:
-    st.markdown("#### 📊 Market Signal")
-    st.write("Combined renewable growth outpaces fossil fuel expansion, signaling fundamental energy transition in U.S. electricity grid.")
-
-# Technical Stack
-st.markdown("---")
-st.subheader("🛠️ Technical Implementation")
-
-col1, col2, col3, col4 = st.columns(4)
-
-with col1:
-    st.markdown("**Language**")
-    st.write("Python 3.10+")
-
-with col2:
-    st.markdown("**Data Processing**")
-    st.write("Pandas, NumPy")
-
-with col3:
-    st.markdown("**Visualization**")
-    st.write("Matplotlib, Seaborn")
-
-with col4:
-    st.markdown("**Framework**")
-    st.write("Streamlit")
+    st.markdown("#### 📊 The Big Picture")
+    st.write(f"Together, solar and wind went from **{(solar_start + wind_start):.1f} TWh** to **{(solar_end + wind_end):.1f} TWh**. That's real progress toward cleaner energy, though there's still a long way to go.")
 
 # Sidebar
 with st.sidebar:
-    st.image("https://upload.wikimedia.org/wikipedia/commons/thumb/3/38/Jupyter_logo.svg/1200px-Jupyter_logo.svg.png", width=100)
-    st.title("About This Project")
+    st.markdown("---")
+    st.title("💡 Project Motivation")
     st.markdown("""
-    This analysis quantifies renewable energy growth trends using official EIA data.
+    I wanted to understand which renewable energy source is actually growing faster in the U.S. - solar or wind.
     
-    **Objective:**
-    - Measure solar vs wind momentum
-    - Calculate CAGR for investment insights
-    - Visualize market dynamics
+    With all the talk about clean energy transitions, I was curious to see the data for myself and quantify the real momentum behind each technology.
     
-    **Technologies:**
-    - Python, Pandas, NumPy
-    - Matplotlib, Seaborn
-    - Streamlit
+    **What I Did:**
+    - Found EIA generation data on Kaggle
+    - Cleaned and processed monthly state-level data
+    - Aggregated to annual national totals
+    - Calculated growth metrics (CAGR, YoY)
+    - Built this dashboard to explore the trends
     
-    **Key Finding:**
-    Solar energy is growing 2.8x faster than wind energy, signaling a major shift in renewable adoption patterns.
+    **What I Learned:**
+    The numbers surprised me. Solar is growing much faster than I expected, while wind growth has been more gradual. This tells me solar technology has hit an inflection point in cost and adoption.
+    
+    **Why This Matters:**
+    Understanding these growth patterns helps inform investment decisions, policy planning, and gives us a clearer picture of America's energy future.
     """)
     
     st.markdown("---")
-    st.markdown("**Contact:** [Your Name]")
-    st.markdown("**LinkedIn:** [Your Profile]")
+    st.markdown("**Project by:** Kavya Telang")
     st.markdown("**GitHub:** [Your Repo]")
