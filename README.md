@@ -3,7 +3,7 @@
 An interactive data analysis exploring solar and wind energy growth trends in the United States using official EIA data.
 
 ## Live Demo
-🚀 [View the live app here](YOUR_STREAMLIT_URL_WILL_GO_HERE)
+🚀 [View the live app here](https://kavyatelang-powering-forward-energy-app-4ddwob.streamlit.app/)
 
 ## Project Overview
 I wanted to understand which renewable energy source is growing faster - solar or wind. Using real U.S. Energy Information Administration data from Kaggle, I analyzed generation trends from 2014-2022.
