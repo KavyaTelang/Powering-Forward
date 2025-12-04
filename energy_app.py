@@ -51,7 +51,7 @@ df = load_data()
 # Show data info in sidebar
 st.sidebar.write("### Dataset Info")
 st.sidebar.write(f" Years: {df['Year'].min()} - {df['Year'].max()}")
-st.sidebar.write(f" {len(df)} data points")
+st.sidebar.write(f" {len(df)} Years of Data")
 st.sidebar.write(f" Solar start: {df['Solar_TWh'].iloc[0]:.1f} TWh")
 st.sidebar.write(f" Wind start: {df['Wind_TWh'].iloc[0]:.1f} TWh")
 
