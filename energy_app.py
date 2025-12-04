@@ -8,24 +8,13 @@ import os
 # Set page configuration
 st.set_page_config(
     page_title="Powering Forward - Energy Analysis",
-    page_icon="⚡",
+    page_icon="",
     layout="wide"
 )
 
-# Custom CSS for styling
-st.markdown("""
-    <style>
-    .main-header {
-        font-size: 3rem;
-        font-weight: bold;
-        color: #1f77b4;
-    }
-    </style>
-    """, unsafe_allow_html=True)
-
 # Title and Header
-st.markdown('<p class="main-header">⚡ Powering Forward</p>', unsafe_allow_html=True)
-st.markdown("### A Vector Analysis of U.S. Energy Growth")
+st.title(" Powering Forward: U.S. Energy Growth Analysis")
+st.write("Analyzing renewable energy trends from EIA data")
 
 # LOAD DATA - REAL CSV ONLY
 @st.cache_data
@@ -60,14 +49,15 @@ def load_data():
 df = load_data()
 
 # Show data info in sidebar
-st.sidebar.success(f"✅ Real Kaggle EIA Data Loaded")
-st.sidebar.metric("Total Years", len(df))
-st.sidebar.metric("Date Range", f"{df['Year'].min()} - {df['Year'].max()}")
-st.sidebar.metric("First Solar Value", f"{df['Solar_TWh'].iloc[0]:.1f} TWh")
+st.sidebar.write("### Dataset Info")
+st.sidebar.write(f" Years: {df['Year'].min()} - {df['Year'].max()}")
+st.sidebar.write(f" {len(df)} data points")
+st.sidebar.write(f" Solar start: {df['Solar_TWh'].iloc[0]:.1f} TWh")
+st.sidebar.write(f" Wind start: {df['Wind_TWh'].iloc[0]:.1f} TWh")
 
 # Update the header with actual date range
-st.markdown(f"**Data Source:** U.S. Energy Information Administration (EIA) via Kaggle | **Period:** {df['Year'].min()}-{df['Year'].max()}")
-st.markdown("---")
+st.write(f"**Data:** U.S. Energy Information Administration (EIA) via Kaggle | **Years:** {df['Year'].min()}-{df['Year'].max()}")
+st.write("---")
 
 # Calculate CAGR
 def calculate_cagr(start_value, end_value, num_years):
@@ -85,49 +75,51 @@ solar_cagr = calculate_cagr(solar_start, solar_end, num_years)
 wind_cagr = calculate_cagr(wind_start, wind_end, num_years)
 
 # Key Metrics Row
+st.subheader("Key Growth Metrics")
+
 col1, col2, col3 = st.columns(3)
 
 with col1:
     st.metric(
-        label=f"☀️ Solar CAGR ({num_years}-Year)",
+        label=f" Solar CAGR",
         value=f"{solar_cagr:.2f}%",
-        delta=f"{solar_end - solar_start:.1f} TWh growth"
+        delta=f"+{solar_end - solar_start:.1f} TWh"
     )
-    st.caption(f"From {solar_start:.1f} to {solar_end:.1f} TWh")
+    st.caption(f"{solar_start:.1f} → {solar_end:.1f} TWh ({num_years} years)")
 
 with col2:
     st.metric(
-        label=f"💨 Wind CAGR ({num_years}-Year)",
+        label=f" Wind CAGR",
         value=f"{wind_cagr:.2f}%",
-        delta=f"{wind_end - wind_start:.1f} TWh growth"
+        delta=f"+{wind_end - wind_start:.1f} TWh"
     )
-    st.caption(f"From {wind_start:.1f} to {wind_end:.1f} TWh")
+    st.caption(f"{wind_start:.1f} → {wind_end:.1f} TWh ({num_years} years)")
 
 with col3:
     st.metric(
-        label="📈 Growth Differential",
-        value=f"{solar_cagr - wind_cagr:.2f}%",
-        delta="Solar leads Wind"
+        label=" Difference",
+        value=f"{solar_cagr - wind_cagr:.2f}%"
     )
-    st.caption("Accelerating momentum")
+    st.caption("Solar growing faster")
 
-st.markdown("---")
+st.write("---")
 
 # Tabs for different visualizations
 tab1, tab2, tab3, tab4 = st.tabs([
-    "📊 Generation Overview", 
-    "📈 CAGR Analysis", 
-    "📉 YoY Trends",
-    "📋 Data Table"
+    "Generation Over Time", 
+    "Growth Rate Comparison", 
+    "Year-over-Year Changes",
+    "Raw Data"
 ])
 
 # Tab 1: Generation Overview
 with tab1:
-    st.subheader(f"Renewable Energy Generation Trends ({df['Year'].min()}-{df['Year'].max()})")
+    st.write("### Energy Generation Trends")
+    st.write(f"Looking at how solar and wind generation changed from {df['Year'].min()} to {df['Year'].max()}")
     
     # Set style
     sns.set_style("whitegrid")
-    fig, ax = plt.subplots(figsize=(14, 7))
+    fig, ax = plt.subplots(figsize=(12, 6))
     
     # Plot lines
     ax.plot(df['Year'], df['Solar_TWh'], marker='o', linewidth=3, 
@@ -139,48 +131,37 @@ with tab1:
             linestyle='--', alpha=0.7)
     
     # Styling
-    ax.set_xlabel('Year', fontsize=14, fontweight='bold')
-    ax.set_ylabel('Energy Generation (TWh)', fontsize=14, fontweight='bold')
-    ax.set_title('U.S. Renewable Energy Generation (Real Kaggle EIA Data)', 
-                 fontsize=16, fontweight='bold', pad=20)
-    ax.legend(fontsize=12, loc='upper left')
+    ax.set_xlabel('Year', fontsize=12)
+    ax.set_ylabel('Energy Generation (TWh)', fontsize=12)
+    ax.set_title('Solar vs Wind Generation', fontsize=14, pad=15)
+    ax.legend(fontsize=11, loc='upper left')
     ax.grid(True, alpha=0.3)
-    ax.set_xticks(df['Year'])
-    
-    # Add annotation
-    ax.annotate(f'Solar: {solar_end:.1f} TWh', 
-                xy=(df['Year'].iloc[-1], solar_end),
-                xytext=(10, 20), textcoords='offset points',
-                fontsize=11, color='#ff8c00',
-                bbox=dict(boxstyle='round,pad=0.5', facecolor='white', alpha=0.8),
-                arrowprops=dict(arrowstyle='->', color='#ff8c00', lw=2))
     
     plt.tight_layout()
     st.pyplot(fig)
     
-    st.info(f"**What I Found:** Solar generation grew from {solar_start:.1f} TWh to {solar_end:.1f} TWh (a {((solar_end/solar_start - 1)*100):.0f}% increase), while wind grew from {wind_start:.1f} TWh to {wind_end:.1f} TWh ({((wind_end/wind_start - 1)*100):.0f}% increase). The difference in growth trajectories is striking.")
+    st.write(f"**Note:** Solar grew from {solar_start:.1f} TWh to {solar_end:.1f} TWh (a {((solar_end/solar_start - 1)*100):.0f}% increase), while wind went from {wind_start:.1f} TWh to {wind_end:.1f} TWh ({((wind_end/wind_start - 1)*100):.0f}% increase). The growth patterns are pretty different.")
 
 # Tab 2: CAGR Analysis
 with tab2:
-    st.subheader("Compound Annual Growth Rate (CAGR) Comparison")
+    st.write("### Comparing Growth Rates (CAGR)")
+    st.write("CAGR = Compound Annual Growth Rate, basically the steady rate needed to go from start to end value")
     
-    fig, ax = plt.subplots(figsize=(10, 6))
+    fig, ax = plt.subplots(figsize=(10, 5))
     
-    categories = ['Solar CAGR', 'Wind CAGR']
+    categories = ['Solar', 'Wind']
     values = [solar_cagr, wind_cagr]
     colors = ['#ff8c00', '#1f77b4']
     
-    bars = ax.barh(categories, values, color=colors, height=0.5, alpha=0.8)
+    bars = ax.barh(categories, values, color=colors, alpha=0.7)
     
     # Add value labels
     for i, (bar, value) in enumerate(zip(bars, values)):
-        ax.text(value + 0.5, i, f'{value:.2f}%', 
-                va='center', fontsize=14, fontweight='bold')
+        ax.text(value + 0.3, i, f'{value:.2f}%', va='center', fontsize=12)
     
-    ax.set_xlabel('Compound Annual Growth Rate (%)', fontsize=13, fontweight='bold')
-    ax.set_title(f'CAGR Comparison: Solar vs Wind ({df["Year"].min()}-{df["Year"].max()})', 
-                 fontsize=16, fontweight='bold', pad=20)
-    ax.set_xlim(0, max(values) * 1.2)
+    ax.set_xlabel('CAGR (%)', fontsize=12)
+    ax.set_title(f'Growth Rate Comparison ({df["Year"].min()}-{df["Year"].max()})', fontsize=13)
+    ax.set_xlim(0, max(values) * 1.15)
     ax.grid(True, alpha=0.3, axis='x')
     
     plt.tight_layout()
@@ -189,57 +170,60 @@ with tab2:
     col1, col2 = st.columns(2)
     
     with col1:
-        st.markdown("#### ☀️ Solar Growth")
-        st.write(f"**CAGR: {solar_cagr:.2f}%**")
-        st.write("Solar is growing fast because the technology keeps getting cheaper. What used to be expensive is now cost-competitive with traditional energy sources, which is driving rapid adoption.")
+        st.write("** Solar**")
+        st.write(f"CAGR: {solar_cagr:.2f}%")
+        st.write("Growing fast probably because solar panels keep getting cheaper. Makes sense that adoption would accelerate.")
     
     with col2:
-        st.markdown("#### 💨 Wind Growth")
-        st.write(f"**CAGR: {wind_cagr:.2f}%**")
-        st.write("Wind has been around longer and is more established. The growth rate is lower because we're adding to an already large base - but it's still growing steadily.")
+        st.write("** Wind**")
+        st.write(f"CAGR: {wind_cagr:.2f}%")
+        st.write("Slower growth rate but from a much bigger starting point. Wind has been around longer so less room for explosive growth.")
 
 # Tab 3: YoY Trends
 with tab3:
-    st.subheader("Year-over-Year Growth Rates")
+    st.write("### Year-over-Year Growth")
+    st.write("How much did generation change each year compared to the previous year?")
     
     df_yoy = df[df['Year'] > df['Year'].min()].copy()
     
-    fig, ax = plt.subplots(figsize=(14, 7))
+    fig, ax = plt.subplots(figsize=(12, 5))
     
     ax.plot(df_yoy['Year'], df_yoy['Solar_YoY_Growth'], 
-            marker='o', linewidth=2.5, label='Solar YoY%', 
-            color='#ff8c00', markersize=8)
+            marker='o', linewidth=2, label='Solar YoY %', 
+            color='#ff8c00', markersize=6)
     ax.plot(df_yoy['Year'], df_yoy['Wind_YoY_Growth'], 
-            marker='s', linewidth=2.5, label='Wind YoY%', 
-            color='#1f77b4', markersize=8)
+            marker='s', linewidth=2, label='Wind YoY %', 
+            color='#1f77b4', markersize=6)
     
-    ax.axhline(y=0, color='red', linestyle='--', alpha=0.3, linewidth=1)
+    ax.axhline(y=0, color='gray', linestyle='--', alpha=0.5, linewidth=1)
     
-    ax.set_xlabel('Year', fontsize=13, fontweight='bold')
-    ax.set_ylabel('Year-over-Year Growth Rate (%)', fontsize=13, fontweight='bold')
-    ax.set_title('Renewable Energy YoY Growth Volatility', 
-                 fontsize=16, fontweight='bold', pad=20)
-    ax.legend(fontsize=12, loc='best')
+    ax.set_xlabel('Year', fontsize=12)
+    ax.set_ylabel('Growth Rate (%)', fontsize=12)
+    ax.set_title('Annual Growth Rate Changes', fontsize=13)
+    ax.legend(fontsize=11)
     ax.grid(True, alpha=0.3)
-    ax.set_xticks(df_yoy['Year'])
     
     plt.tight_layout()
     st.pyplot(fig)
     
-    with st.expander("📊 Methodology & Data Processing"):
-        st.markdown(f"""
-        - **Data Source:** Kaggle dataset of U.S. EIA renewable energy generation
-        - **Processing:** Filtered for "Total Electric Power Industry" to avoid double-counting
-        - **Aggregation:** Summed monthly state-level data to annual national totals
-        - **Unit Conversion:** Converted from Megawatt-hours (MWh) to Terawatt-hours (TWh)
-        - **CAGR Formula:** (End Value / Start Value)^(1 / Years) - 1
-        - **Time Period:** {df['Year'].min()} to {df['Year'].max()} ({num_years} years)
-        - **Tools:** Python, Pandas, NumPy, Matplotlib, Seaborn, Streamlit
+    st.write("You can see the volatility year-to-year. Some years solar jumped a lot, other years less so.")
+    
+    with st.expander("How I processed the data"):
+        st.write("""
+        **Data Processing Steps:**
+        1. Downloaded EIA data from Kaggle (organized_Gen.csv)
+        2. Filtered for "Total Electric Power Industry" only (to avoid double-counting)
+        3. Extracted rows where energy source contains "Solar" or "Wind"
+        4. Grouped by year and summed across all states
+        5. Converted from MWh to TWh (divided by 1,000,000)
+        6. Calculated year-over-year growth using Pandas `.pct_change()`
+        
+        **Tools:** Python, Pandas, NumPy, Matplotlib, Seaborn, Streamlit
         """)
 
 # Tab 4: Data Table
 with tab4:
-    st.subheader("Complete Dataset")
+    st.write("### The Actual Numbers")
     
     # Format the dataframe for display
     display_df = df.copy()
@@ -252,79 +236,60 @@ with tab4:
     st.dataframe(display_df, use_container_width=True)
     
     # Summary statistics
-    st.subheader("Summary Statistics")
+    st.write("### Quick Stats")
     
-    summary_data = {
-        'Metric': [
-            f'Starting Value ({df["Year"].min()})',
-            f'Ending Value ({df["Year"].max()})',
-            'Total Growth',
-            'CAGR',
-            'Average Annual Increase',
-            'Peak YoY Growth',
-        ],
-        'Solar': [
-            f"{solar_start:.1f} TWh",
-            f"{solar_end:.1f} TWh",
-            f"{((solar_end - solar_start) / solar_start * 100):.1f}%",
-            f"{solar_cagr:.2f}%",
-            f"{(solar_end - solar_start) / num_years:.1f} TWh/year",
-            f"{df_yoy['Solar_YoY_Growth'].max():.1f}%",
-        ],
-        'Wind': [
-            f"{wind_start:.1f} TWh",
-            f"{wind_end:.1f} TWh",
-            f"{((wind_end - wind_start) / wind_start * 100):.1f}%",
-            f"{wind_cagr:.2f}%",
-            f"{(wind_end - wind_start) / num_years:.1f} TWh/year",
-            f"{df_yoy['Wind_YoY_Growth'].max():.1f}%",
-        ]
-    }
+    col1, col2 = st.columns(2)
     
-    summary_df = pd.DataFrame(summary_data)
-    st.dataframe(summary_df, use_container_width=True)
+    with col1:
+        st.write("**Solar:**")
+        st.write(f"- Started at: {solar_start:.1f} TWh")
+        st.write(f"- Ended at: {solar_end:.1f} TWh")
+        st.write(f"- Total growth: {((solar_end - solar_start) / solar_start * 100):.0f}%")
+        st.write(f"- CAGR: {solar_cagr:.2f}%")
+    
+    with col2:
+        st.write("**Wind:**")
+        st.write(f"- Started at: {wind_start:.1f} TWh")
+        st.write(f"- Ended at: {wind_end:.1f} TWh")
+        st.write(f"- Total growth: {((wind_end - wind_start) / wind_start * 100):.0f}%")
+        st.write(f"- CAGR: {wind_cagr:.2f}%")
 
 # Footer Section
-st.markdown("---")
-st.subheader("🔑 My Takeaways")
+st.write("---")
+st.write("## What I Learned")
 
-col1, col2, col3 = st.columns(3)
+col1, col2 = st.columns(2)
 
 with col1:
-    st.markdown("#### ☀️ Solar Is Accelerating")
-    st.write(f"Solar's **{solar_cagr:.1f}%** growth rate far exceeds wind's **{wind_cagr:.1f}%**. This makes sense given how much solar panel costs have dropped - they're now cheaper than ever for both utilities and homeowners.")
-
+    st.write("**About the data:**")
+    st.write(f"Solar's {solar_cagr:.1f}% growth rate is way higher than wind's {wind_cagr:.1f}%. This makes sense - solar panels have gotten a lot cheaper in recent years, so more people and companies are installing them. Wind was already pretty established when this data period started.")
+    
 with col2:
-    st.markdown("#### 💨 Wind Is Steady")
-    st.write(f"Wind grew **{((wind_end - wind_start) / wind_start * 100):.0f}%** over this period, but from a much larger base. It's a more mature technology, so the explosive growth phase has passed.")
-
-with col3:
-    st.markdown("#### 📊 The Big Picture")
-    st.write(f"Together, solar and wind went from **{(solar_start + wind_start):.1f} TWh** to **{(solar_end + wind_end):.1f} TWh**. That's real progress toward cleaner energy, though there's still a long way to go.")
+    st.write("**Why this matters:**")
+    st.write("Understanding which renewable energy sources are growing fastest helps with planning investments and policy decisions. The fact that solar is accelerating so quickly suggests it's hitting a tipping point in adoption.")
 
 # Sidebar
 with st.sidebar:
-    st.markdown("---")
-    st.title("💡 Project Motivation")
-    st.markdown("""
-    I wanted to understand which renewable energy source is actually growing faster in the U.S. - solar or wind.
+    st.write("---")
+    st.write("## Why I Built This")
+    st.write("""
+    I kept hearing about renewable energy growth but wanted to see the actual numbers myself. 
     
-    With all the talk about clean energy transitions, I was curious to see the data for myself and quantify the real momentum behind each technology.
+    Which is really growing faster - solar or wind? By how much?
     
-    **What I Did:**
-    - Found EIA generation data on Kaggle
-    - Cleaned and processed monthly state-level data
+    So I found EIA data on Kaggle, cleaned it up, and built this dashboard to explore the trends.
+    
+    **Main finding:** Solar is growing WAY faster than I expected (~15% annually vs wind's ~2%). 
+    
+    **What I did:**
+    - Downloaded monthly state-level generation data
+    - Cleaned it to avoid double-counting 
     - Aggregated to annual national totals
-    - Calculated growth metrics (CAGR, YoY)
-    - Built this dashboard to explore the trends
+    - Calculated CAGR and other growth metrics
+    - Built visualizations to see patterns
     
-    **What I Learned:**
-    The numbers surprised me. Solar is growing much faster than I expected, while wind growth has been more gradual. This tells me solar technology has hit an inflection point in cost and adoption.
-    
-    **Why This Matters:**
-    Understanding these growth patterns helps inform investment decisions, policy planning, and gives us a clearer picture of America's energy future.
+    The data was messier than expected - had to figure out the "Total Electric Power Industry" filtering to get accurate numbers. But that's part of working with real-world data.
     """)
     
     st.markdown("---")
     st.markdown("**Project by:** Kavya Telang")
-    st.markdown("**GitHub:** [Your Repo]")
